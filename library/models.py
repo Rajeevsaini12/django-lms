@@ -17,10 +17,7 @@ class Book(models.Model):
         return self.title
 
 
-from django.contrib.auth.models import User
-from django.db import models
-
-class Member(models.Model):
+'''class Member(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
 
@@ -37,7 +34,26 @@ class Member(models.Model):
     )
 
     def __str__(self):
-        return self.user.username
+        return self.user.username '''
+
+
+
+class Member(models.Model):
+
+    ROLE_CHOICES = (
+        ("admin", "Admin"),
+        ("student", "Student"),
+         
+    )
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+
+    phone = models.CharField(max_length=15)
+
+    def __str__(self):
+        return self.user.username    
 
 
 class IssueRecord(models.Model):
