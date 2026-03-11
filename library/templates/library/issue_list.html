@@ -1,0 +1,39 @@
+{% extends "library/base.html" %}
+
+{% block content %}
+
+<h2>Issued Books</h2>
+
+<table class="table table-bordered">
+
+<tr>
+<th>Book</th>
+<th>Member</th>
+<th>Issue Date</th>
+<th>Due Date</th>
+<th>Status</th>
+</tr>
+
+{% for r in records %}
+
+<tr>
+<td>{{ r.book.title }}</td>
+<td>{{ r.member.user.username }}</td>
+<td>{{ r.issue_date }}</td>
+<td>{{ r.due_date }}</td>
+
+<td>
+{% if r.return_date %}
+Returned
+{% else %}
+Issued
+{% endif %}
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

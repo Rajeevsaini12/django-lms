@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<title>Library LMS</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<nav class="navbar navbar-dark bg-dark">
+<div class="container-fluid">
+
+<a class="navbar-brand" href="/">Library LMS</a>
+
+<div>
+<a class="btn btn-light" href="/">Dashboard</a>
+<a class="btn btn-light" href="/books/">Books</a>
+<a class="btn btn-light" href="/issue/">Issue Book</a>
+</div>
+
+</div>
+</nav>
+
+<div class="container mt-4">
+
+{% block content %}
+
+{% endblock %}
+
+</div>
+
+</body>
+</html>

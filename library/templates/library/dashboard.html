@@ -1,0 +1,113 @@
+{% extends 'library/base.html' %}
+
+{% block content %}
+
+<h2 class="mb-4">Library Dashboard</h2>
+
+<div class="row mb-4">
+
+<div class="col-md-3">
+<div class="card text-bg-primary">
+<div class="card-body">
+<h5>Total Books</h5>
+<h2>{{ books }}</h2>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card text-bg-success">
+<div class="card-body">
+<h5>Total Members</h5>
+<h2>{{ members }}</h2>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card text-bg-warning">
+<div class="card-body">
+<h5>Issued Books</h5>
+<h2>{{ issued }}</h2>
+</div>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="card text-bg-danger">
+<div class="card-body">
+<h5>Overdue Books</h5>
+<h2>{{ overdue }}</h2>
+</div>
+</div>
+</div>
+
+</div>
+
+
+<h3>Issued Records</h3>
+
+<table class="table table-bordered table-striped">
+
+<thead class="table-dark">
+<tr>
+<th>Book</th>
+<th>Member</th>
+<th>Issue Date</th>
+<th>Due Date</th>
+<th>Status</th>
+<th>Fine</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for r in records %}
+
+<tr>
+
+<td>{{ r.book.title }}</td>
+
+<td>{{ r.member.user.username }}</td>
+
+<td>{{ r.issue_date }}</td>
+
+<td>{{ r.due_date }}</td>
+
+
+<td>
+{% if r.return_date %}
+<span class="badge bg-success">Returned</span>
+{% else %}
+<span class="badge bg-warning">Issued</span>
+{% endif %}
+</td>
+
+<td>{{ r.fine }}</td>
+
+<td>
+
+{% if not r.return_date %}
+
+<a href="{% url 'update_issue_record' r.id %}" class="btn btn-sm btn-warning">
+Update
+</a>
+
+<a href="/return/{{r.id}}" class="btn btn-sm btn-danger">
+Return
+</a>
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% endblock %}
