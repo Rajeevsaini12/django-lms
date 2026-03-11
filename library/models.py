@@ -17,27 +17,6 @@ class Book(models.Model):
         return self.title
 
 
-'''class Member(models.Model):
-
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-
-    phone = models.CharField(max_length=15)
-
-    role = models.CharField(
-        max_length=20,
-        choices=[
-            ('admin', 'Admin'),
-            ('librarian', 'Librarian'),
-            ('student', 'Student')
-        ],
-        default='student'
-    )
-
-    def __str__(self):
-        return self.user.username '''
-
-
-
 class Member(models.Model):
 
     ROLE_CHOICES = (
