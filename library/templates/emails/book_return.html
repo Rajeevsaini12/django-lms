@@ -1,0 +1,35 @@
+<h2>Book Return Confirmation</h2>
+<p>Hello <strong>{{ user.first_name|default:user.username }}</strong>,</p>
+<p>Thank you for returning the book to the library.</p>
+
+<p><strong>Return Details:</strong></p>
+<table>
+    <tr>
+        <th>Book Title</th>
+        <td>{{ issue_record.book.title }}</td>
+    </tr>
+    <tr>
+        <th>Author</th>
+        <td>{{ issue_record.book.author }}</td>
+    </tr>
+    <tr>
+        <th>Issue Date</th>
+        <td>{{ issue_record.issue_date|date:"Y-m-d" }}</td>
+    </tr>
+    <tr>
+        <th>Due Date</th>
+        <td>{{ issue_record.due_date|date:"Y-m-d" }}</td>
+    </tr>
+    <tr>
+        <th>Return Date</th>
+        <td>{{ issue_record.return_date|date:"Y-m-d" }}</td>
+    </tr>
+    {% if fine > 0 %}
+    <tr style="background-color: #f8d7da;">
+        <th>Late Fee</th>
+        <td class="warning">₹{{ fine }}</td>
+    </tr>
+    {% endif %}
+</table>
+
+<p class="success">✓ Book return recorded successfully.</p>

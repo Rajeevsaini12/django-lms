@@ -1,45 +1,272 @@
 {% extends "library/base.html" %}
+
 {% block content %}
 
-<div class="container mt-4">
-
-<h2>Books</h2>
-
-<form method="GET">
-    <input type="text" name="q" placeholder="Search book" value="{{ request.GET.q }}">
-    <button type="submit">Search</button>
-</form>
-
-<br>
-
-<table class="table table-bordered table-striped">
-<thead>
-<tr>
-    <th>Title</th>
-    <th>Author</th>
-    <th>ISBN</th>
-    <th>Available</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for book in books %}
-<tr>
-    <td>{{ book.title }}</td>
-    <td>{{ book.author }}</td>
-    <td>{{ book.isbn }}</td>
-    <td>{{ book.available_copies }}</td>
-</tr>
-{% empty %}
-<tr>
-<td colspan="4">No Books Found</td>
-</tr>
-{% endfor %}
-
-</tbody>
-</table>
-
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title"><i class="fas fa-book-open"></i> Books Library</h1>
+            <p class="page-subtitle">Browse all available books in the system</p>
+        </div>
+        {% if user.member.role == 'admin' %}
+        <a href="{% url 'add_book' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add New Book
+        </a>
+        {% endif %}
+    </div>
 </div>
+
+<!-- Search & Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Search Books</label>
+                <input type="text" name="q" class="form-control" placeholder="Title, author, or ISBN..." value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Availability</label>
+                <select name="availability" class="form-select">
+                    <option value="">All Books</option>
+                    <option value="available" {% if request.GET.availability == 'available' %}selected{% endif %}>Available Only</option>
+                    <option value="unavailable" {% if request.GET.availability == 'unavailable' %}selected{% endif %}>Unavailable</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Sort By</label>
+                <select name="sort" class="form-select">
+                    <option value="title" {% if request.GET.sort == 'title' %}selected{% endif %}>Title (A-Z)</option>
+                    <option value="-title" {% if request.GET.sort == '-title' %}selected{% endif %}>Title (Z-A)</option>
+                    <option value="author" {% if request.GET.sort == 'author' %}selected{% endif %}>Author (A-Z)</option>
+                    <option value="-available_copies" {% if request.GET.sort == '-available_copies' %}selected{% endif %}>Most Available</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #667eea;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total Books</h6>
+                <h2 class="card-text">{{ total_books }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #28a745;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Available</h6>
+                <h2 class="card-text">{{ available_books }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #ff9800;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Issued</h6>
+                <h2 class="card-text">{{ issued_books }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #17a2b8;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Unique Titles</h6>
+                <h2 class="card-text">{{ books_count }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Books Grid View -->
+<div class="row">
+    {% for book in books %}
+    <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+        <div class="card h-100 book-card" style="transition: all 0.3s; cursor: pointer;">
+            <div class="card-body d-flex flex-column">
+                <!-- Book Header -->
+                <div class="mb-3">
+                    <h5 class="card-title mb-2">
+                        <i class="fas fa-book"></i> {{ book.title }}
+                    </h5>
+                    <p class="card-text text-muted mb-2">
+                        <strong>Author:</strong> {{ book.author }}
+                    </p>
+                    {% if book.isbn %}
+                    <p class="card-text text-muted">
+                        <strong>ISBN:</strong> {{ book.isbn }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                <!-- Availability Section -->
+                <div class="alert alert-info mb-3 py-2" role="alert">
+                    <small>
+                        <strong>Copies:</strong> 
+                        <span class="badge bg-success">{{ book.available_copies }} Available</span> / 
+                        <span class="badge bg-warning">{{ book.total_copies }} Total</span>
+                    </small>
+                </div>
+
+                <!-- Availability Status -->
+                <div class="mb-3">
+                    {% if book.available_copies > 0 %}
+                        <span class="badge bg-success p-2" style="width: 100%;">
+                            <i class="fas fa-check-circle"></i> Available
+                        </span>
+                    {% else %}
+                        <span class="badge bg-danger p-2" style="width: 100%;">
+                            <i class="fas fa-times-circle"></i> Not Available
+                        </span>
+                    {% endif %}
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="mb-3">
+                    <small class="text-muted">Availability</small>
+                    <div class="progress" style="height: 6px;">
+                        {% widthratio book.available_copies book.total_copies 100 as availability_percent %}
+                        {% if availability_percent >= 50 %}
+                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ availability_percent }}%"></div>
+                        {% elif availability_percent >= 25 %}
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ availability_percent }}%"></div>
+                        {% else %}
+                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ availability_percent }}%"></div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-auto">
+                    {% if user.is_authenticated %}
+                        {% if user.member.role == 'admin' %}
+                            <div class="btn-group w-100" role="group">
+                                <form method="POST" action="{% url 'issue_book' %}" style="flex: 1;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="book_id" value="{{ book.id }}">
+                                    <button type="submit" class="btn btn-sm btn-success w-100" {% if book.available_copies == 0 %}disabled{% endif %}>
+                                        <i class="fas fa-hand-holding-heart"></i> Issue
+                                    </button>
+                                </form>
+                                <a href="{% url 'edit_book' book.id %}" class="btn btn-sm btn-warning" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'delete_book' book.id %}" class="btn btn-sm btn-danger" title="Delete" onclick="return confirm('Delete this book?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        {% else %}
+                            <!-- Student view -->
+                            <form method="POST" action="{% url 'issue_book' %}" class="w-100">
+                                {% csrf_token %}
+                                <input type="hidden" name="book_id" value="{{ book.id }}">
+                                <button type="submit" class="btn btn-primary w-100 btn-sm" {% if book.available_copies == 0 %}disabled{% endif %}>
+                                    <i class="fas fa-hand-holding-heart"></i> 
+                                    {% if book.available_copies > 0 %}Issue This Book{% else %}Not Available{% endif %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-sm btn-primary w-100">
+                            <i class="fas fa-sign-in-alt"></i> Login to Issue
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info text-center py-5" role="alert">
+            <i class="fas fa-search fa-3x mb-3" style="color: #17a2b8;"></i>
+            <p>No books found matching your criteria.</p>
+            {% if request.GET.q or request.GET.availability %}
+                <a href="{% url 'book_list' %}" class="btn btn-primary mt-3">
+                    <i class="fas fa-redo"></i> Clear Filters
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if books.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if books.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ books.previous_page_number }}">Previous</a>
+            </li>
+        {% endif %}
+        
+        {% for num in books.paginator.page_range %}
+            {% if books.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > books.number|add:'-3' and num < books.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if books.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ books.next_page_number }}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ books.paginator.num_pages }}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<style>
+    .card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .book-card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        transform: translateY(-4px);
+    }
+    
+    .card-title {
+        font-weight: 600;
+        color: #333;
+        word-break: break-word;
+    }
+    
+    .btn-group .btn {
+        border-radius: 0;
+    }
+    
+    .btn-group .btn:first-child {
+        border-radius: 4px 0 0 4px;
+    }
+    
+    .btn-group .btn:last-child {
+        border-radius: 0 4px 4px 0;
+    }
+</style>
 
 {% endblock %}

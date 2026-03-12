@@ -1,0 +1,193 @@
+{% extends "library/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1 class="page-title"><i class="fas fa-user-graduate"></i> Student Dashboard</h1>
+    <p class="page-subtitle">Welcome, <strong>{{ user.first_name|default:user.username }}</strong>! Manage your book issues here.</p>
+</div>
+
+<!-- Statistics Card -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #667eea;">
+            <div class="card-body">
+                <i class="fas fa-book-open fa-2x mb-3" style="color: #667eea;"></i>
+                <h6 class="card-title text-muted">Books Issued</h6>
+                <h2 class="card-text">{{ student_data.books_currently_issued }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #d9534f;">
+            <div class="card-body">
+                <i class="fas fa-exclamation-triangle fa-2x mb-3" style="color: #d9534f;"></i>
+                <h6 class="card-title text-muted">Overdue Books</h6>
+                <h2 class="card-text text-danger">{{ student_data.overdue_books }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #f0ad4e;">
+            <div class="card-body">
+                <i class="fas fa-money-bill-wave fa-2x mb-3" style="color: #f0ad4e;"></i>
+                <h6 class="card-title text-muted">Total Fine</h6>
+                <h2 class="card-text">₹<span id="fine">{{ student_data.total_fine }}</span></h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #28a745;">
+            <div class="card-body">
+                <i class="fas fa-history fa-2x mb-3" style="color: #28a745;"></i>
+                <h6 class="card-title text-muted">Total Books Taken</h6>
+                <h2 class="card-text">{{ student_data.total_books_history }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Currently Issued Books -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-book-reader"></i> Currently Issued Books</h5>
+                {% if student_data.books_currently_issued > 0 %}
+                    <span class="badge bg-primary">{{ student_data.books_currently_issued }} Active</span>
+                {% endif %}
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Book Title</th>
+                            <th>Author</th>
+                            <th>Issue Date</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for book in current_books %}
+                            <tr>
+                                <td><strong>{{ book.book.title }}</strong></td>
+                                <td>{{ book.book.author }}</td>
+                                <td>{{ book.issue_date|date:"d M, Y" }}</td>
+                                <td>
+                                    {% if book.is_overdue %}
+                                        <span class="badge bg-danger">{{ book.due_date|date:"d M, Y" }} (OVERDUE!)</span>
+                                    {% else %}
+                                        <span class="badge bg-success">{{ book.due_date|date:"d M, Y" }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if book.is_overdue %}
+                                        <span class="badge bg-danger">⚠️ Overdue</span>
+                                    {% else %}
+                                        <span class="badge bg-info">Active</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="fas fa-smile-wink"></i> You don't have any books issued!
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Overdue Books Alert -->
+{% if student_data.overdue_books > 0 %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong><i class="fas fa-exclamation-circle"></i> Attention!</strong>
+    You have {{ student_data.overdue_books }} overdue book(s). Please return them as soon as possible to avoid additional fines.
+    <a href="{% url 'student_overdue' %}" class="alert-link">View Overdue Books</a>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- Profile Information -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-user"></i> Profile Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Full Name</label>
+                    <p>{{ user.first_name|default:"Not provided" }} {{ user.last_name|default:"" }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Username</label>
+                    <p>{{ user.username }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Email</label>
+                    <p>{{ user.email }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">Phone No.</label>
+                    <p>{{ student_info.phone|default:"Not provided" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Important Information</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-3">
+                        <strong><i class="fas fa-calendar"></i> Issue Period:</strong> 14 days
+                    </li>
+                    <li class="mb-3">
+                        <strong><i class="fas fa-money-bill-wave"></i> Late Fee:</strong> ₹5 per day after due date
+                    </li>
+                    <li class="mb-3">
+                        <strong><i class="fas fa-book-open"></i> Max Books:</strong> 3 books at a time
+                    </li>
+                    <li class="mb-3">
+                        <strong><i class="fas fa-bell"></i> Email Reminders:</strong> You'll get reminders 3 days before due date
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .page-header {
+        margin-bottom: 30px;
+    }
+</style>
+
+{% endblock %}

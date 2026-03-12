@@ -1,0 +1,438 @@
+{% extends "library/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title"><i class="fas fa-book-open"></i> Books (API View)</h1>
+            <p class="page-subtitle">Browse all books in real-time from the API</p>
+        </div>
+    </div>
+</div>
+
+<!-- Search & Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Search Books</label>
+                <input type="text" id="searchInput" class="form-control" placeholder="Title, author, or ISBN...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Availability</label>
+                <select id="availabilityFilter" class="form-select">
+                    <option value="">All Books</option>
+                    <option value="available">Available Only</option>
+                    <option value="unavailable">Unavailable</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Sort By</label>
+                <select id="sortFilter" class="form-select">
+                    <option value="title">Title (A-Z)</option>
+                    <option value="author">Author (A-Z)</option>
+                    <option value="available">Available Count</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button id="refreshBtn" class="btn btn-primary w-100">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4" id="statsContainer">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #667eea;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total Books</h6>
+                <h2 class="card-text" id="totalBooks">-</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #28a745;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Available</h6>
+                <h2 class="card-text" id="availableBooks">-</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #ff9800;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Unavailable</h6>
+                <h2 class="card-text" id="unavailableBooks">-</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #17a2b8;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total Copies</h6>
+                <h2 class="card-text" id="totalCopies">-</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading & Error Messages -->
+<div id="loadingSpinner" class="text-center py-5" style="display: none;">
+    <div class="spinner-border text-primary mb-3" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p>Loading books...</p>
+</div>
+
+<div id="errorAlert" class="alert alert-danger alert-dismissible fade show" role="alert" style="display: none;">
+    <strong><i class="fas fa-exclamation-circle"></i> Error!</strong>
+    <span id="errorMessage"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<!-- Books Grid View -->
+<div class="row" id="booksContainer">
+    <div class="col-12 text-center py-5">
+        <p class="text-muted">No books loaded yet.</p>
+    </div>
+</div>
+
+<!-- Pagination -->
+<nav id="paginationContainer" style="display: none;"></nav>
+
+<style>
+    .card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .book-card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        transform: translateY(-4px);
+    }
+    
+    .card-title {
+        font-weight: 600;
+        color: #333;
+        word-break: break-word;
+    }
+
+    .page-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .page-title {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #333;
+    }
+
+    .page-subtitle {
+        color: #999;
+        margin: 0.5rem 0 0 0;
+        font-size: 0.95rem;
+    }
+</style>
+
+<script>
+    let allBooks = [];
+    const itemsPerPage = 12;
+    let currentPage = 1;
+    const isAuthenticated = {{ user.is_authenticated|lower }};
+    const isAdmin = {{ user.member.role|default:'student'|stringformat:'s' }} === 'admin';
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadBooks();
+        setupEventListeners();
+    });
+
+    function setupEventListeners() {
+        document.getElementById('searchInput').addEventListener('input', debounce(filterAndDisplay, 300));
+        document.getElementById('availabilityFilter').addEventListener('change', filterAndDisplay);
+        document.getElementById('sortFilter').addEventListener('change', filterAndDisplay);
+        document.getElementById('refreshBtn').addEventListener('click', loadBooks);
+    }
+
+    function debounce(func, delay) {
+        let timeoutId;
+        return function(...args) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    function loadBooks() {
+        showLoadingSpinner(true);
+        hideError();
+
+        fetch('/api/books/')
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to fetch books');
+                return response.json();
+            })
+            .then(data => {
+                allBooks = data;
+                updateStatistics(data);
+                currentPage = 1;
+                filterAndDisplay();
+                showLoadingSpinner(false);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showError('Failed to load books from API. Please try again.');
+                showLoadingSpinner(false);
+            });
+    }
+
+    function filterAndDisplay() {
+        const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+        const availabilityFilter = document.getElementById('availabilityFilter').value;
+        const sortBy = document.getElementById('sortFilter').value;
+
+        let filtered = allBooks.filter(book => {
+            const matchesSearch = !searchQuery || 
+                book.title.toLowerCase().includes(searchQuery) ||
+                book.author.toLowerCase().includes(searchQuery) ||
+                (book.isbn && book.isbn.includes(searchQuery));
+
+            const matchesAvailability = 
+                !availabilityFilter ||
+                (availabilityFilter === 'available' && book.available_copies > 0) ||
+                (availabilityFilter === 'unavailable' && book.available_copies === 0);
+
+            return matchesSearch && matchesAvailability;
+        });
+
+        // Sort
+        switch(sortBy) {
+            case 'title':
+                filtered.sort((a, b) => a.title.localeCompare(b.title));
+                break;
+            case 'author':
+                filtered.sort((a, b) => a.author.localeCompare(b.author));
+                break;
+            case 'available':
+                filtered.sort((a, b) => b.available_copies - a.available_copies);
+                break;
+        }
+
+        currentPage = 1;
+        displayBooks(filtered);
+    }
+
+    function displayBooks(books) {
+        const container = document.getElementById('booksContainer');
+        
+        if (books.length === 0) {
+            container.innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-info text-center py-5" role="alert">
+                        <i class="fas fa-search fa-3x mb-3" style="color: #17a2b8;"></i>
+                        <p>No books found matching your criteria.</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('paginationContainer').style.display = 'none';
+            return;
+        }
+
+        const totalPages = Math.ceil(books.length / itemsPerPage);
+        const startIdx = (currentPage - 1) * itemsPerPage;
+        const paginatedBooks = books.slice(startIdx, startIdx + itemsPerPage);
+
+        let html = '';
+        paginatedBooks.forEach(book => {
+            const availabilityPercent = book.total_copies > 0 
+                ? Math.round((book.available_copies / book.total_copies) * 100)
+                : 0;
+            
+            const availabilityColor = 
+                book.available_copies > 0 ? '#28a745' :
+                book.available_copies === 0 ? '#dc3545' :
+                '#ff9800';
+
+            let actionButton = '';
+            if (isAuthenticated && isAdmin) {
+                actionButton = `<a href="/admin/library/book/${book.id}/change/" class="btn btn-sm btn-warning w-100" target="_blank">
+                    <i class="fas fa-edit"></i> Edit in Admin
+                </a>`;
+            } else if (isAuthenticated) {
+                actionButton = `<button class="btn btn-primary w-100 btn-sm" ${book.available_copies <= 0 ? 'disabled' : ''}>
+                    <i class="fas fa-hand-holding-heart"></i> 
+                    ${book.available_copies > 0 ? 'Issue Book' : 'Not Available'}
+                </button>`;
+            } else {
+                actionButton = `<a href="{% url 'login' %}" class="btn btn-sm btn-primary w-100">
+                    <i class="fas fa-sign-in-alt"></i> Login to Issue
+                </a>`;
+            }
+
+            html += `
+                <div class="col-lg-4 col-md-6 col-sm-12 mb-4">
+                    <div class="card h-100 book-card" style="transition: all 0.3s;">
+                        <div class="card-body d-flex flex-column">
+                            <div class="mb-3">
+                                <h5 class="card-title mb-2">
+                                    <i class="fas fa-book"></i> ${book.title}
+                                </h5>
+                                <p class="card-text text-muted mb-2">
+                                    <strong>Author:</strong> ${book.author}
+                                </p>
+                                ${book.isbn ? `<p class="card-text text-muted"><strong>ISBN:</strong> ${book.isbn}</p>` : ''}
+                            </div>
+
+                            <div class="alert alert-info mb-3 py-2" role="alert">
+                                <small>
+                                    <strong>Copies:</strong>
+                                    <span class="badge bg-success">${book.available_copies} Available</span> /
+                                    <span class="badge bg-warning">${book.total_copies} Total</span>
+                                </small>
+                            </div>
+
+                            <div class="mb-3">
+                                <span class="badge p-2" style="width: 100%; background-color: ${availabilityColor};">
+                                    ${book.available_copies > 0 
+                                        ? '<i class="fas fa-check-circle"></i> Available' 
+                                        : '<i class="fas fa-times-circle"></i> Not Available'}
+                                </span>
+                            </div>
+
+                            <div class="mb-3">
+                                <small class="text-muted">Availability</small>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: ${availabilityPercent}%; background-color: ${availabilityColor};">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-auto">
+                                <p class="small text-muted mb-2">
+                                    <i class="fas fa-info-circle"></i> ID: ${book.id}
+                                </p>
+                                ${actionButton}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        // Display pagination
+        if (totalPages > 1) {
+            displayPagination(totalPages, books.length);
+        } else {
+            document.getElementById('paginationContainer').style.display = 'none';
+        }
+    }
+
+    function displayPagination(totalPages, totalBooks) {
+        const paginationContainer = document.getElementById('paginationContainer');
+        let html = '<ul class="pagination justify-content-center">';
+
+        if (currentPage > 1) {
+            html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(1); return false;">First</a></li>`;
+            html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${currentPage - 1}); return false;">Previous</a></li>`;
+        }
+
+        for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+            if (i === currentPage) {
+                html += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+            } else {
+                html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a></li>`;
+            }
+        }
+
+        if (currentPage < totalPages) {
+            html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${currentPage + 1}); return false;">Next</a></li>`;
+            html += `<li class="page-item"><a class="page-link" href="#" onclick="goToPage(${totalPages}); return false;">Last</a></li>`;
+        }
+
+        html += '</ul>';
+        paginationContainer.innerHTML = html;
+        paginationContainer.style.display = 'block';
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const books = getFilteredBooks();
+        displayBooks(books);
+    }
+
+    function getFilteredBooks() {
+        const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+        const availabilityFilter = document.getElementById('availabilityFilter').value;
+        const sortBy = document.getElementById('sortFilter').value;
+
+        let filtered = allBooks.filter(book => {
+            const matchesSearch = !searchQuery || 
+                book.title.toLowerCase().includes(searchQuery) ||
+                book.author.toLowerCase().includes(searchQuery) ||
+                (book.isbn && book.isbn.includes(searchQuery));
+
+            const matchesAvailability = 
+                !availabilityFilter ||
+                (availabilityFilter === 'available' && book.available_copies > 0) ||
+                (availabilityFilter === 'unavailable' && book.available_copies === 0);
+
+            return matchesSearch && matchesAvailability;
+        });
+
+        switch(sortBy) {
+            case 'title':
+                filtered.sort((a, b) => a.title.localeCompare(b.title));
+                break;
+            case 'author':
+                filtered.sort((a, b) => a.author.localeCompare(b.author));
+                break;
+            case 'available':
+                filtered.sort((a, b) => b.available_copies - a.available_copies);
+                break;
+        }
+
+        return filtered;
+    }
+
+    function updateStatistics(books) {
+        const totalBooks = books.length;
+        const availableBooks = books.filter(b => b.available_copies > 0).length;
+        const unavailableBooks = books.filter(b => b.available_copies === 0).length;
+        const totalCopies = books.reduce((sum, b) => sum + b.total_copies, 0);
+
+        document.getElementById('totalBooks').textContent = totalBooks;
+        document.getElementById('availableBooks').textContent = availableBooks;
+        document.getElementById('unavailableBooks').textContent = unavailableBooks;
+        document.getElementById('totalCopies').textContent = totalCopies;
+    }
+
+    function showLoadingSpinner(show) {
+        document.getElementById('loadingSpinner').style.display = show ? 'block' : 'none';
+    }
+
+    function showError(message) {
+        const errorAlert = document.getElementById('errorAlert');
+        document.getElementById('errorMessage').textContent = message;
+        errorAlert.style.display = 'block';
+    }
+
+    function hideError() {
+        document.getElementById('errorAlert').style.display = 'none';
+    }
+</script>
+
+{% endblock %}

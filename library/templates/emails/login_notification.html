@@ -1,0 +1,12 @@
+<h2>Welcome to Library Management System!</h2>
+<p>Hello <strong>{{ user.first_name|default:user.username }}</strong>,</p>
+<p>You have successfully logged in to your account.</p>
+
+<p><strong>Login Details:</strong></p>
+<ul>
+    <li>Username: {{ user.username }}</li>
+    <li>Email: {{ user.email }}</li>
+    <li>Login Time: {{ login_time }}</li>
+</ul>
+
+<p>If this wasn't you, please contact the administrator immediately.</p>

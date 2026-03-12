@@ -2,44 +2,272 @@
 
 {% block content %}
 
-<h2>Issue Book</h2>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title"><i class="fas fa-book-reader"></i> Issue Book to Student</h1>
+            <p class="page-subtitle">Select a student and book to issue</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
 
-<form method="POST">
-{% csrf_token %}
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #667eea;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Available Books</h6>
+                <h2 class="card-text">{{ available_books_count }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #28a745;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Registered Students</h6>
+                <h2 class="card-text">{{ students_count }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #ff9800;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Currently Issued</h6>
+                <h2 class="card-text">{{ issued_books_count }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #17a2b8;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Today's Date</h6>
+                <h4 class="card-text" style="font-size: 18px;">{% now "d M Y" %}</h4>
+            </div>
+        </div>
+    </div>
+</div>
 
-<label>Select Book</label>
-<select name="book" class="form-control">
+<!-- Messages -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
 
-{% for book in books %}
-<option value="{{ book.id }}">{{ book.title }}</option>
-{% endfor %}
+<!-- Issue Book Form -->
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="fas fa-plus-circle"></i> Issue New Book</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{% url 'issue_book_page' %}" novalidate>
+            {% csrf_token %}
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.student.id_for_label }}" class="form-label">
+                        <i class="fas fa-user-graduate"></i> {{ form.student.label }}
+                    </label>
+                    {{ form.student }}
+                    {% if form.student.errors %}
+                        <div class="alert alert-danger mt-2" style="font-size: 13px;">
+                            {% for error in form.student.errors %}
+                                <i class="fas fa-exclamation-circle"></i> {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <small class="form-text text-muted d-block mt-2">
+                        Only students are listed here
+                    </small>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.book.id_for_label }}" class="form-label">
+                        <i class="fas fa-book"></i> {{ form.book.label }}
+                    </label>
+                    {{ form.book }}
+                    {% if form.book.errors %}
+                        <div class="alert alert-danger mt-2" style="font-size: 13px;">
+                            {% for error in form.book.errors %}
+                                <i class="fas fa-exclamation-circle"></i> {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    <small class="form-text text-muted d-block mt-2">
+                        Only books with available copies are shown
+                    </small>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.issue_days.id_for_label }}" class="form-label">
+                        <i class="fas fa-calendar-alt"></i> {{ form.issue_days.label }}
+                    </label>
+                    {{ form.issue_days }}
+                    <small class="form-text text-muted d-block mt-2">
+                        {{ form.issue_days.help_text }}
+                    </small>
+                    {% if form.issue_days.errors %}
+                        <div class="alert alert-danger mt-2" style="font-size: 13px;">
+                            {% for error in form.issue_days.errors %}
+                                <i class="fas fa-exclamation-circle"></i> {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">
+                        <i class="fas fa-calendar-check"></i> Due Date
+                    </label>
+                    <input type="text" class="form-control" id="due-date" readonly style="background-color: #f8f9fa;">
+                    <small class="form-text text-muted d-block mt-2">
+                        Calculated based on issue days
+                    </small>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.notes.id_for_label }}" class="form-label">
+                    <i class="fas fa-sticky-note"></i> {{ form.notes.label }}
+                </label>
+                {{ form.notes }}
+                <small class="form-text text-muted d-block mt-2">
+                    Optional: Add reason or special notes for this issue
+                </small>
+                {% if form.notes.errors %}
+                    <div class="alert alert-danger mt-2" style="font-size: 13px;">
+                        {% for error in form.notes.errors %}
+                            <i class="fas fa-exclamation-circle"></i> {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Form-level errors -->
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger mb-3" role="alert">
+                    <strong><i class="fas fa-exclamation-triangle"></i> Error:</strong>
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-check-circle"></i> Issue Book
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
-</select>
+<!-- Info Box -->
+<div class="card mt-4" style="border-left: 4px solid #17a2b8;">
+    <div class="card-body">
+        <h6 class="card-title"><i class="fas fa-info-circle"></i> Information</h6>
+        <ul style="margin-bottom: 0; padding-left: 20px;">
+            <li>Only <strong>available books</strong> with copies in stock are shown</li>
+            <li>Only <strong>registered students</strong> (not admins) can receive books</li>
+            <li>A <strong>notification email</strong> will be sent to the student with issue details</li>
+            <li>The student cannot issue the same book again until they return it</li>
+            <li>Issue duration can be set from <strong>1 to 90 days</strong></li>
+            <li>After the due date, the student will receive <strong>overdue reminders</strong></li>
+            <li>A late fee of <strong>₹5 per day</strong> applies after the due date</li>
+        </ul>
+    </div>
+</div>
 
-<br>
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e0e0e0;
+    }
+    
+    .page-title {
+        color: #667eea;
+        font-size: 28px;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }issue
+    
+    .page-subtitle {
+        color: #999;
+        font-size: 14px;
+        margin: 0;
+    }
+    
+    .form-select, .form-control {
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+    
+    .form-select:focus, .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        border-radius: 5px;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border-radius: 5px 5px 0 0;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+        color: white;
+    }
+</style>
 
-<label>Select Member</label>
-
-<select name="member" class="form-control">
-
-<option value="">------</option>
-
-{% for m in members %}
-
-<option value="{{ m.id }}">
-{{ m.user.username }}
-</option>
-
-{% endfor %}
-
-</select>
-
-<br>
-
-<button type="submit" class="btn btn-primary">
-Issue Book
-</button>
-
-</form>
+<script>
+    // Calculate due date when issue_days changes
+    document.getElementById('id_issue_days').addEventListener('change', calculateDueDate);
+    document.getElementById('id_issue_days').addEventListener('input', calculateDueDate);
+    
+    function calculateDueDate() {
+        const issueDays = parseInt(document.getElementById('id_issue_days').value) || 7;
+        const today = new Date();
+        const dueDate = new Date(today.getTime() + issueDays * 24 * 60 * 60 * 1000);
+        
+        const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
+        document.getElementById('due-date').value = dueDate.toLocaleDateString('en-IN', options);
+    }
+    
+    // Calculate initial due date on page load
+    window.addEventListener('load', calculateDueDate);
+</script>
 
 {% endblock %}

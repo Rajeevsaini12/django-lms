@@ -1,0 +1,29 @@
+{% extends 'library/base.html' %}
+
+{% block content %}
+
+<h2>Book History: {{book.title}}</h2>
+
+<table border="1">
+
+<tr>
+<th>Member</th>
+<th>Issue Date</th>
+<th>Due Date</th>
+<th>Return Date</th>
+</tr>   
+
+{% for r in records %}
+
+<tr>
+<td>{{r.member}}</td>
+<td>{{r.issue_date}}</td>
+<td>{{r.due_date}}</td>
+<td>{{r.return_date}}</td>
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

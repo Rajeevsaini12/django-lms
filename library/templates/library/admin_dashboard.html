@@ -1,0 +1,163 @@
+{% extends "library/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1 class="page-title"><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
+    <p class="page-subtitle">Welcome, <strong>{{ user.first_name|default:user.username }}</strong>! Here's your library overview.</p>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #667eea;">
+            <div class="card-body">
+                <i class="fas fa-book fa-2x mb-3" style="color: #667eea;"></i>
+                <h6 class="card-title text-muted">Total Books</h6>
+                <h2 class="card-text" id="total-books">{{ dashboard.books }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #28a745;">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x mb-3" style="color: #28a745;"></i>
+                <h6 class="card-title text-muted">Total Members</h6>
+                <h2 class="card-text" id="total-members">{{ dashboard.members }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #ff9800;">
+            <div class="card-body">
+                <i class="fas fa-hand-holding-heart fa-2x mb-3" style="color: #ff9800;"></i>
+                <h6 class="card-title text-muted">Books Issued</h6>
+                <h2 class="card-text" id="issued-books">{{ dashboard.issued }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #d9534f;">
+            <div class="card-body">
+                <i class="fas fa-exclamation-circle fa-2x mb-3" style="color: #d9534f;"></i>
+                <h6 class="card-title text-muted">Overdue Books</h6>
+                <h2 class="card-text text-danger" id="overdue-books">{{ dashboard.overdue }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-lightning-bolt"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="btn-group" role="group">
+                    <a href="{% url 'add_book' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add Book
+                    </a>
+                    <a href="{% url 'issue_book_page' %}" class="btn btn-success">
+                        <i class="fas fa-hand-holding-heart"></i> Issue Book
+                    </a>
+                    <a href="{% url 'confirm_return_page' %}" class="btn btn-warning">
+                        <i class="fas fa-undo"></i> Confirm Return
+                    </a>
+                    <a href="{% url 'admin_history' %}" class="btn btn-info">
+                        <i class="fas fa-history"></i> View History
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Issues Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-list"></i> Recent Book Issues</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Book Title</th>
+                            <th>Student Name</th>
+                            <th>Issue Date</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for issue in recent_issues %}
+                            <tr>
+                                <td><strong>{{ issue.book.title }}</strong></td>
+                                <td>{{ issue.member.user.first_name|default:issue.member.user.username }}</td>
+                                <td>{{ issue.issue_date|date:"d M, Y" }}</td>
+                                <td>
+                                    {% if issue.is_overdue %}
+                                        <span class="badge bg-danger">{{ issue.due_date|date:"d M, Y" }} (OVERDUE)</span>
+                                    {% else %}
+                                        <span class="badge bg-info">{{ issue.due_date|date:"d M, Y" }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if issue.return_date %}
+                                        <span class="badge bg-success">Returned</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Issued</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if not issue.return_date %}
+                                        <a href="{% url 'update_due_date_page' issue.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-calendar-alt"></i> Update Due Date
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    No recent issues found
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-group .btn {
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+
+{% endblock %}

@@ -1,0 +1,195 @@
+{% extends "library/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1 class="page-title"><i class="fas fa-history"></i> Book Issue History</h1>
+    <p class="page-subtitle">Complete history of all book transactions in the library</p>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #667eea;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total Transactions</h6>
+                <h2 class="card-text">{{ total_records }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #ff9800;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Currently Issued</h6>
+                <h2 class="card-text">{{ issued_count }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #28a745;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Returned</h6>
+                <h2 class="card-text">{{ returned_count }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="fas fa-filter"></i> Filter</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" name="q" class="form-control" placeholder="Book title or student name" value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="issued" {% if request.GET.status == 'issued' %}selected{% endif %}>Issued</option>
+                    <option value="returned" {% if request.GET.status == 'returned' %}selected{% endif %}>Returned</option>
+                    <option value="overdue" {% if request.GET.status == 'overdue' %}selected{% endif %}>Overdue</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Sort By</label>
+                <select name="sort" class="form-select">
+                    <option value="-issue_date" {% if request.GET.sort == '-issue_date' %}selected{% endif %}>Latest First</option>
+                    <option value="issue_date" {% if request.GET.sort == 'issue_date' %}selected{% endif %}>Oldest First</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- History Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover table-striped mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Book Title</th>
+                    <th>Author</th>
+                    <th>Student / Member</th>
+                    <th>Issue Date</th>
+                    <th>Due Date</th>
+                    <th>Return Date</th>
+                    <th>Status</th>
+                    <th>Fine</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                    <tr>
+                        <td>
+                            <strong>{{ record.book.title }}</strong><br>
+                            <small class="text-muted">ISBN: {{ record.book.isbn|default:"N/A" }}</small>
+                        </td>
+                        <td>{{ record.book.author }}</td>
+                        <td>{{ record.member.user.first_name|default:record.member.user.username }}</td>
+                        <td>{{ record.issue_date|date:"d M, Y" }}</td>
+                        <td>
+                            {% if record.is_overdue and not record.return_date %}
+                                <span class="badge bg-danger">{{ record.due_date|date:"d M, Y" }}</span>
+                            {% else %}
+                                {{ record.due_date|date:"d M, Y" }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.return_date %}
+                                {{ record.return_date|date:"d M, Y" }}
+                            {% else %}
+                                <span class="badge bg-warning">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.return_date %}
+                                <span class="badge bg-success"><i class="fas fa-check"></i> Returned</span>
+                            {% elif record.is_overdue %}
+                                <span class="badge bg-danger"><i class="fas fa-exclamation"></i> Overdue</span>
+                            {% else %}
+                                <span class="badge bg-info"><i class="fas fa-book-open"></i> Issued</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.fine > 0 %}
+                                <span class="badge bg-warning">₹{{ record.fine }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="fas fa-inbox" style="font-size: 40px; margin-bottom: 20px;"></i>
+                            <p>No records found</p>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if records.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if records.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ records.previous_page_number }}">Previous</a>
+            </li>
+        {% endif %}
+        
+        {% for num in records.paginator.page_range %}
+            {% if records.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if records.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ records.next_page_number }}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ records.paginator.num_pages }}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<style>
+    .card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+
+{% endblock %}

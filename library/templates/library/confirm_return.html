@@ -1,0 +1,216 @@
+{% extends "library/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="page-title"><i class="fas fa-undo"></i> Confirm Book Returns</h1>
+            <p class="page-subtitle">Verify and confirm books returned by students</p>
+        </div>
+        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #667eea;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Pending Returns</h6>
+                <h2 class="card-text">{{ total_pending }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #d9534f;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Overdue Returns</h6>
+                <h2 class="card-text text-danger">{{ overdue_count }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #17a2b8;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Today's Date</h6>
+                <h4 class="card-text" style="font-size: 18px;">{% now "d M Y" %}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Messages -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- No Pending Returns -->
+{% if not returns_data %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="fas fa-check-circle"></i> <strong>All Books Returned!</strong>
+    <p class="mb-0">There are no pending book returns. All issued books have been returned.</p>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% else %}
+
+<!-- Pending Returns Table -->
+<div class="card">
+    <div class="card-header bg-warning text-white">
+        <h5 class="mb-0"><i class="fas fa-list"></i> Pending Book Returns</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Book Title</th>
+                        <th>Student Name</th>
+                        <th>Issue Date</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Fine (if any)</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in returns_data %}
+                        <tr {% if item.is_overdue %}class="table-danger"{% endif %}>
+                            <td><strong>{{ item.record.book.title }}</strong></td>
+                            <td>{{ item.record.member.user.first_name|default:item.record.member.user.username }}</td>
+                            <td>{{ item.record.issue_date|date:"d M, Y" }}</td>
+                            <td>
+                                {% if item.is_overdue %}
+                                    <span class="badge bg-danger">{{ item.record.due_date|date:"d M, Y" }}</span>
+                                {% else %}
+                                    <span class="badge bg-success">{{ item.record.due_date|date:"d M, Y" }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.is_overdue %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> OVERDUE
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-clock"></i> Not Returned
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.fine > 0 %}
+                                    <span class="badge bg-danger" title="Fine for {{ item.record.due_date|date:'d M' }}">
+                                        <i class="fas fa-money-bill-wave"></i> ₹{{ item.fine }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check"></i> ₹0
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="POST" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="record_id" value="{{ item.record.id }}">
+                                    <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Confirm return of &quot;{{ item.record.book.title }}&quot; from {{ item.record.member.user.first_name|default:item.record.member.user.username }}?')">
+                                        <i class="fas fa-check"></i> Confirm
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Return Instructions -->
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Return Instructions</h5>
+            </div>
+            <div class="card-body">
+                <ol class="list-group list-group-numbered">
+                    <li class="list-group-item">
+                        <strong>Student brings book</strong> to the library counter
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Check the book physically</strong> and verify its condition
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Find the book in this list</strong> using title and student name
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Click "Confirm" button</strong> to mark book as returned
+                    </li>
+                    <li class="list-group-item">
+                        <strong>Student receives confirmation email</strong> with fine details (if overdue)
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="fas fa-money-bill-wave"></i> Fine Details</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>Late Fee:</strong> ₹5 per day
+                </p>
+                <p class="mb-2">
+                    <strong>Calculate:</strong> (Days overdue × ₹5)
+                </p>
+                <div class="alert alert-light">
+                    <small>
+                        Example: If a book is 3 days overdue, the fine is ₹5 × 3 = ₹15
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+<style>
+    .card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+    }
+    
+    .card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa !important;
+    }
+    
+    .page-header {
+        margin-bottom: 30px;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.75rem;
+        font-size: 0.875rem;
+    }
+</style>
+
+{% endblock %}

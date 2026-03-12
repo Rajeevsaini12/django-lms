@@ -1,0 +1,191 @@
+{% extends "library/base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+    <h1 class="page-title"><i class="fas fa-history"></i> My Book History</h1>
+    <p class="page-subtitle">View all your book transactions and return status</p>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #667eea;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Total Books Taken</h6>
+                <h2 class="card-text">{{ total_books }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #ff9800;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Currently Issued</h6>
+                <h2 class="card-text">{{ current_books }}</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 col-sm-6 mb-3">
+        <div class="card text-center h-100" style="border-left: 4px solid #28a745;">
+            <div class="card-body">
+                <h6 class="card-title text-muted">Completed</h6>
+                <h2 class="card-text">{{ completed_books }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="btn-group" role="group">
+            <a href="?status=" class="btn btn-outline-primary {% if not request.GET.status %}active{% endif %}">
+                <i class="fas fa-list"></i> All
+            </a>
+            <a href="?status=current" class="btn btn-outline-warning {% if request.GET.status == 'current' %}active{% endif %}">
+                <i class="fas fa-book-open"></i> Currently Issued
+            </a>
+            <a href="?status=returned" class="btn btn-outline-success {% if request.GET.status == 'returned' %}active{% endif %}">
+                <i class="fas fa-check"></i> Returned
+            </a>
+            <a href="?status=overdue" class="btn btn-outline-danger {% if request.GET.status == 'overdue' %}active{% endif %}">
+                <i class="fas fa-exclamation"></i> Overdue
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- History Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover table-striped mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Book Title</th>
+                    <th>Author</th>
+                    <th>Issue Date</th>
+                    <th>Due Date</th>
+                    <th>Return Date</th>
+                    <th>Status</th>
+                    <th>Fine</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                    <tr>
+                        <td>
+                            <strong>{{ record.book.title }}</strong><br>
+                            <small class="text-muted">{{ record.book.author }}</small>
+                        </td>
+                        <td>{{ record.book.author }}</td>
+                        <td>{{ record.issue_date|date:"d M, Y" }}</td>
+                        <td>
+                            {% if record.is_overdue and not record.return_date %}
+                                <span class="badge bg-danger">{{ record.due_date|date:"d M, Y" }} (OVERDUE)</span>
+                            {% else %}
+                                {{ record.due_date|date:"d M, Y" }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.return_date %}
+                                {{ record.return_date|date:"d M, Y" }}
+                            {% else %}
+                                <span class="badge bg-warning">Not Returned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.return_date %}
+                                <span class="badge bg-success"><i class="fas fa-check-circle"></i> Returned</span>
+                            {% elif record.is_overdue %}
+                                <span class="badge bg-danger"><i class="fas fa-exclamation-circle"></i> Overdue</span>
+                            {% else %}
+                                <span class="badge bg-info"><i class="fas fa-hourglass-half"></i> Active</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.fine > 0 %}
+                                <span class="badge bg-danger">₹{{ record.fine }}</span>
+                            {% else %}
+                                <span class="text-success">✓ No Fine</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-5">
+                            <i class="fas fa-book" style="font-size: 40px; margin-bottom: 20px;"></i>
+                            <p>You haven't taken any books yet!</p>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if records.has_other_pages %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if records.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">First</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ records.previous_page_number }}">Previous</a>
+            </li>
+        {% endif %}
+        
+        {% for num in records.paginator.page_range %}
+            {% if records.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if records.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ records.next_page_number }}">Next</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ records.paginator.num_pages }}">Last</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Overdue Books Alert -->
+{% if overdue_count > 0 %}
+<div class="alert alert-warning alert-dismissible fade show mt-4" role="alert">
+    <strong><i class="fas fa-exclamation-triangle"></i> Attention!</strong>
+    You have <strong>{{ overdue_count }} overdue book(s)</strong>. Please return them as soon as possible to avoid additional fines.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<style>
+    .card {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .btn-group .btn {
+        margin-right: 5px;
+        margin-bottom: 10px;
+    }
+</style>
+
+{% endblock %}
