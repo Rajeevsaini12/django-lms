@@ -1,4 +1,16 @@
 from django import forms
+
+class OTPForm(forms.Form):
+    otp = forms.CharField(
+        max_length=6,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Enter the OTP sent to your email',
+            'autocomplete': 'one-time-code'
+        }),
+        label='OTP'
+    )
 from .models import Book, IssueRecord, Member
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError

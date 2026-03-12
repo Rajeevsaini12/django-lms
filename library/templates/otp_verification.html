@@ -1,0 +1,26 @@
+{% extends 'library/base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">Email Verification</div>
+                <div class="card-body">
+                    <p class="mb-3">An OTP has been sent to <strong>{{ email }}</strong>. Please enter it below to verify your email address.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group mb-3">
+                            <label for="{{ otp_form.otp.id_for_label }}">{{ otp_form.otp.label }}</label>
+                            {{ otp_form.otp }}
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">Verify OTP</button>
+                    </form>
+                    <div class="mt-3 text-center">
+                        <a href="{% url 'register' %}" class="btn btn-link">Back to Registration</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

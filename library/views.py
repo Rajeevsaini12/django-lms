@@ -408,118 +408,132 @@ def register_student(request):
     """Registration view for new students"""
     if request.user.is_authenticated:
         return redirect('dashboard')
-    
-    if request.method == 'POST':
-        from .forms import StudentRegistrationForm
-        import string
-        import random
-        
+
+    from .forms import StudentRegistrationForm, OTPForm
+    import string
+    import random
+    from django.core.mail import send_mail
+    from django.conf import settings
+    from django.contrib import messages
+    from django.utils import timezone
+    from django.contrib.auth.models import User
+    from .models import Member
+
+    # Step 1: Registration form submitted
+    if request.method == 'POST' and 'otp' not in request.POST:
         form = StudentRegistrationForm(request.POST)
         if form.is_valid():
+            email = form.cleaned_data['email']
+            otp = random.randint(100000, 999999)
+            request.session['registration_data'] = form.cleaned_data
+            request.session['otp'] = otp
             try:
-                # Extract form data
-                first_name = form.cleaned_data['first_name']
-                last_name = form.cleaned_data['last_name']
-                email = form.cleaned_data['email']
-                phone = form.cleaned_data['phone']
-                
-                # Generate username from email (before @)
+                send_mail(
+                    'Your OTP Code for LMS Registration',
+                    f'Your OTP is {otp}',
+                    settings.EMAIL_FROM_USER,
+                    [email],
+                    fail_silently=False,
+                )
+                messages.info(request, f'An OTP has been sent to {email}. Please enter it below to verify your email.')
+            except Exception as e:
+                messages.error(request, f'❌ Could not send OTP: {str(e)}')
+                return render(request, 'register.html', {'form': form})
+            otp_form = OTPForm()
+            return render(request, 'otp_verification.html', {'otp_form': otp_form, 'email': email})
+        else:
+            return render(request, 'register.html', {'form': form})
+
+    # Step 2: OTP verification
+    elif request.method == 'POST' and 'otp' in request.POST:
+        otp_form = OTPForm(request.POST)
+        if otp_form.is_valid():
+            user_otp = otp_form.cleaned_data['otp']
+            session_otp = str(request.session.get('otp'))
+            if user_otp == session_otp:
+                data = request.session.get('registration_data')
+                if not data:
+                    messages.error(request, 'Session expired. Please register again.')
+                    return redirect('register')
+                first_name = data['first_name']
+                last_name = data['last_name']
+                email = data['email']
+                phone = data['phone']
                 username = email.split('@')[0]
-                
-                # Handle duplicate username
                 counter = 1
                 original_username = username
                 while User.objects.filter(username=username).exists():
                     username = f"{original_username}{counter}"
                     counter += 1
-                
-                # Generate a secure random password
                 characters = string.ascii_letters + string.digits + '!@#$%'
                 password = ''.join(random.choice(characters) for _ in range(12))
-                
-                # Create User
-                user = User.objects.create_user(
-                    username=username,
-                    email=email,
-                    password=password,
-                    first_name=first_name,
-                    last_name=last_name
-                )
-                
-                # Create Member profile (student role)
-                member = Member.objects.create(
-                    user=user,
-                    role='student',
-                    phone=phone
-                )
-                
-                # Send registration email with credentials
-                from django.core.mail import send_mail
-                from django.conf import settings
-                
-                subject = '🎉 Welcome to Library Management System - Your Login Credentials'
-                
-                html_message = f"""
-                <html>
-                    <body style="font-family: Arial, sans-serif;">
-                        <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px;">
-                            <h2 style="color: #667eea;">Welcome to LMS! 📚</h2>
-                            <p>Hello <strong>{first_name} {last_name}</strong>,</p>
-                            <p>Thank you for registering with the Library Management System! Your account has been successfully created.</p>
-                            
-                            <p style="margin-top: 30px;"><strong>Your Login Credentials:</strong></p>
-                            <div style="background-color: white; padding: 15px; border-left: 4px solid #667eea; margin: 20px 0;">
-                                <p><strong>Username:</strong> <code>{username}</code></p>
-                                <p><strong>Password:</strong> <code>{password}</code></p>
-                                <p><strong>Email:</strong> {email}</p>
-                            </div>
-                            
-                            <p style="color: #d9534f;"><strong>⚠️ Important Security Notes:</strong></p>
-                            <ul style="color: #666;">
-                                <li>Your password is case-sensitive. Keep it safe and never share it.</li>
-                                <li>We recommend changing your password after your first login.</li>
-                                <li>If you didn't register, please contact the administrator immediately.</li>
-                            </ul>
-                            
-                            <p><strong>Login Link:</strong></p>
-                            <p><a href="http://localhost:4000/login/" style="color: #667eea; text-decoration: none; font-weight: bold;">Click here to login</a></p>
-                            
-                            <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
-                            <p style="color: #666; font-size: 12px;">
-                                <strong>Account Details:</strong><br>
-                                Phone: {phone}<br>
-                                Role: Student<br>
-                                Registration Date: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}
-                            </p>
-                            
-                            <p style="color: #999; font-size: 11px; margin-top: 20px;">
-                                This is an automated email. Please do not reply directly to this email.
-                            </p>
-                        </div>
-                    </body>
-                </html>
-                """
-                
-                plain_message = f"""
-                Welcome to LMS!
-                
-                Hello {first_name} {last_name},
-                
-                Your account has been successfully created.
-                
-                LOGIN CREDENTIALS:
-                Username: {username}
-                Password: {password}
-                Email: {email}
-                
-                Please keep these credentials safe and change your password after first login.
-                
-                Login at: http://localhost:4000/login/
-                
-                Thank you!
-                """
-                
                 try:
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password,
+                        first_name=first_name,
+                        last_name=last_name
+                    )
+                    member = Member.objects.create(
+                        user=user,
+                        role='student',
+                        phone=phone
+                    )
+                    subject = '🎉 Welcome to Library Management System - Your Login Credentials'
+                    html_message = f"""
+                    <html>
+                        <body style="font-family: Arial, sans-serif;">
+                            <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px;">
+                                <h2 style="color: #667eea;">Welcome to LMS! 📚</h2>
+                                <p>Hello <strong>{first_name} {last_name}</strong>,</p>
+                                <p>Thank you for registering with the Library Management System! Your account has been successfully created.</p>
+                                <p style="margin-top: 30px;"><strong>Your Login Credentials:</strong></p>
+                                <div style="background-color: white; padding: 15px; border-left: 4px solid #667eea; margin: 20px 0;">
+                                    <p><strong>Username:</strong> <code>{username}</code></p>
+                                    <p><strong>Password:</strong> <code>{password}</code></p>
+                                    <p><strong>Email:</strong> {email}</p>
+                                </div>
+                                <p style="color: #d9534f;"><strong>⚠️ Important Security Notes:</strong></p>
+                                <ul style="color: #666;">
+                                    <li>Your password is case-sensitive. Keep it safe and never share it.</li>
+                                    <li>We recommend changing your password after your first login.</li>
+                                    <li>If you didn't register, please contact the administrator immediately.</li>
+                                </ul>
+                                <p><strong>Login Link:</strong></p>
+                                <p><a href="http://localhost:4000/login/" style="color: #667eea; text-decoration: none; font-weight: bold;">Click here to login</a></p>
+                                <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+                                <p style="color: #666; font-size: 12px;">
+                                    <strong>Account Details:</strong><br>
+                                    Phone: {phone}<br>
+                                    Role: Student<br>
+                                    Registration Date: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}
+                                </p>
+                                <p style="color: #999; font-size: 11px; margin-top: 20px;">
+                                    This is an automated email. Please do not reply directly to this email.
+                                </p>
+                            </div>
+                        </body>
+                    </html>
+                    """
+                    plain_message = f"""
+                    Welcome to LMS!
+                    
+                    Hello {first_name} {last_name},
+                    
+                    Your account has been successfully created.
+                    
+                    LOGIN CREDENTIALS:
+                    Username: {username}
+                    Password: {password}
+                    Email: {email}
+                    
+                    Please keep these credentials safe and change your password after first login.
+                    
+                    Login at: http://localhost:4000/login/
+                    
+                    Thank you!
+                    """
                     send_mail(
                         subject,
                         plain_message,
@@ -528,31 +542,30 @@ def register_student(request):
                         html_message=html_message,
                         fail_silently=False,
                     )
-                    print(f"Registration email sent to {email}")
+                    messages.success(
+                        request,
+                        f'✅ Registration successful! Your login credentials have been sent to {email}. Please check your inbox and login.'
+                    )
+                    # Clean up session
+                    if 'registration_data' in request.session:
+                        del request.session['registration_data']
+                    if 'otp' in request.session:
+                        del request.session['otp']
+                    return redirect('login')
                 except Exception as e:
-                    print(f"Error sending registration email: {str(e)}")
-                
-                # Redirect to login with success message
-                from django.contrib import messages
-                messages.success(
-                    request,
-                    f'✅ Registration successful! Your login credentials have been sent to {email}. Please check your inbox and login.'
-                )
-                return redirect('login')
-                
-            except Exception as e:
-                print(f"Registration error: {str(e)}")
-                from django.contrib import messages
-                messages.error(request, f'❌ Registration failed: {str(e)}')
-                return render(request, 'register.html', {'form': form})
+                    messages.error(request, f'❌ Registration failed: {str(e)}')
+                    return redirect('register')
+            else:
+                messages.error(request, 'Invalid OTP. Please try again.')
+                otp_form = OTPForm()
+                return render(request, 'otp_verification.html', {'otp_form': otp_form, 'email': request.session.get('registration_data', {}).get('email', '')})
         else:
-            # Form has errors
-            pass
+            return render(request, 'otp_verification.html', {'otp_form': otp_form, 'email': request.session.get('registration_data', {}).get('email', '')})
+
+    # Step 0: Show registration form
     else:
-        from .forms import StudentRegistrationForm
         form = StudentRegistrationForm()
-    
-    return render(request, 'register.html', {'form': form})
+        return render(request, 'register.html', {'form': form})
 
 
 @require_http_methods(["GET", "POST"])
