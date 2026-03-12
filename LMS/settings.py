@@ -1,3 +1,6 @@
+# Session timeout for auto logout after inactivity
+SESSION_COOKIE_AGE = 60 # 1 minutes (in seconds)
+SESSION_SAVE_EVERY_REQUEST = True  # Reset timer on each request
 """
 Django settings for LMS project.
 
@@ -39,7 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'library',
     'rest_framework',
-
+    'django_crontab',
 ]
 
 REST_FRAMEWORK = {
@@ -150,3 +153,16 @@ DEFAULT_FROM_EMAIL = '0112it201031@gmail.com'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
+
+# Crontab Configuration - Scheduled Tasks
+# Schedule book reminders to run daily at 9 AM
+CRONJOBS = [
+    ('0 9 * * *', 'library.cron.send_daily_reminders', '>> /var/log/django-cron.log 2>&1'),
+]
+
+# Cron Schedule Format: minute hour day month weekday
+# Examples:
+# ('0 9 * * *', ...) - 9:00 AM every day
+# ('0 */6 * * *', ...) - Every 6 hours at minute 0
+# ('*/30 * * * *', ...) - Every 30 minutes
+# ('0 9 * * 1', ...) - 9 AM every Monday

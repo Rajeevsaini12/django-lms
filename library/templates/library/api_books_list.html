@@ -150,7 +150,7 @@
     const itemsPerPage = 12;
     let currentPage = 1;
     const isAuthenticated = {{ user.is_authenticated|lower }};
-    const isAdmin = {{ user.member.role|default:'student'|stringformat:'s' }} === 'admin';
+    const isAdmin = {{ user.is_authenticated|lower }} && '{{ user.member.role }}' === 'admin';
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
@@ -274,7 +274,7 @@
                     ${book.available_copies > 0 ? 'Issue Book' : 'Not Available'}
                 </button>`;
             } else {
-                actionButton = `<a href="{% url 'login' %}" class="btn btn-sm btn-primary w-100">
+                actionButton = `<a href="/login/" class="btn btn-sm btn-primary w-100">
                     <i class="fas fa-sign-in-alt"></i> Login to Issue
                 </a>`;
             }

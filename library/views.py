@@ -638,7 +638,6 @@ def book_list_view(request):
     available_books = sum(book.available_copies for book in Book.objects.all())
     issued_books = IssueRecord.objects.filter(return_date__isnull=True).count()
     unique_titles = Book.objects.count()
-    
     # Pagination
     paginator = Paginator(books_queryset, 20)  # 20 books per page
     page_number = request.GET.get('page', 1)
@@ -662,6 +661,8 @@ def book_list_view(request):
 def add_book(request):
     """Add a new book - Admin only"""
     if not hasattr(request.user, 'member') or request.user.member.role != 'admin':
+        from django.contrib import messages
+        messages.error(request, '❌ Only administrators may add new books.')
         return redirect('book_list')
     
     if request.method == 'POST':
@@ -669,6 +670,8 @@ def add_book(request):
         form = BookForm(request.POST)
         if form.is_valid():
             form.save()
+            from django.contrib import messages
+            messages.success(request, '✅ Book added successfully!')
             return redirect('book_list')
     else:
         from .forms import BookForm

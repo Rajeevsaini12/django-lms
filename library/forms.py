@@ -10,7 +10,7 @@ class BookForm(forms.ModelForm):
 
     class Meta:
         model = Book
-        fields = ['title', 'author', 'total_copies', 'available_copies']
+        fields = ['title', 'author', 'isbn', 'total_copies', 'available_copies']
 
 
 class MemberForm(forms.ModelForm):
