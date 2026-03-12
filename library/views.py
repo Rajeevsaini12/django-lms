@@ -738,7 +738,7 @@ def test_email(request):
     from django.core.mail import send_mail
     from django.conf import settings
     
-    test_email_address = request.GET.get('email', 'test@example.com')
+    test_email_address = request.GET.get('email', '0112it201031@gmail.com')
     
     try:
         print("\n=== TESTING EMAIL CONFIGURATION ===")

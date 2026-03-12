@@ -3,40 +3,80 @@
 {% block content %}
 
 <div class="container mt-4">
-    <h2 class="mb-4">{{ title }}</h2>
-    <div class="card shadow p-4">
-        <form method="POST">
-            {% csrf_token %}
-
+    {% if action == 'delete' %}
+        <h2 class="mb-4 text-danger">Confirm Book Deletion</h2>
+        <div class="card shadow p-4 border-danger">
+            <div class="alert alert-warning">
+                <strong>⚠️ Warning:</strong> This action cannot be undone. Are you sure you want to delete this book?
+            </div>
+            
             <div class="mb-3">
-                <label class="form-label">Book Title</label>
-                {{ form.title }}
+                <label class="form-label"><strong>Book Title</strong></label>
+                <p class="form-control-plaintext">{{ book.title }}</p>
             </div>
 
             <div class="mb-3">
-                <label class="form-label">Author</label>
-                {{ form.author }}
+                <label class="form-label"><strong>Author</strong></label>
+                <p class="form-control-plaintext">{{ book.author }}</p>
             </div>
 
             <div class="mb-3">
-                <label class="form-label">ISBN</label>
-                {{ form.isbn }}
+                <label class="form-label"><strong>ISBN</strong></label>
+                <p class="form-control-plaintext">{{ book.isbn }}</p>
             </div>
 
             <div class="mb-3">
-                <label class="form-label">Total Copies</label>
-                {{ form.total_copies }}
+                <label class="form-label"><strong>Total Copies</strong></label>
+                <p class="form-control-plaintext">{{ book.total_copies }}</p>
             </div>
 
             <div class="mb-3">
-                <label class="form-label">Available Copies</label>
-                {{ form.available_copies }}
+                <label class="form-label"><strong>Available Copies</strong></label>
+                <p class="form-control-plaintext">{{ book.available_copies }}</p>
             </div>
 
-            <button type="submit" class="btn btn-primary">Save Book</button>
-            <a href="{% url 'book_list' %}" class="btn btn-secondary">Cancel</a>
-        </form>
-    </div>
+            <form method="POST" class="mt-4">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Delete Book</button>
+                <a href="{% url 'book_list' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    {% else %}
+        <h2 class="mb-4">{{ title }}</h2>
+        <div class="card shadow p-4">
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">Book Title</label>
+                    {{ form.title }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Author</label>
+                    {{ form.author }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">ISBN</label>
+                    {{ form.isbn }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Total Copies</label>
+                    {{ form.total_copies }}
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Available Copies</label>
+                    {{ form.available_copies }}
+                </div>
+
+                <button type="submit" class="btn btn-primary">Save Book</button>
+                <a href="{% url 'book_list' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    {% endif %}
 </div>
 
 {% endblock %}

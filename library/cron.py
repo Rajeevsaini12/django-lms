@@ -20,24 +20,23 @@ def send_daily_reminders():
     Runs every day at 9 AM.
     
     Tasks performed:
-    1. Send due date reminders (books due within 1 day)
+    1. Send due date reminders (books due within 3 days)
     2. Send overdue notifications (books overdue by 1+ days)
     """
     try:
         today = timezone.now().date()
-        tomorrow = today + timedelta(days=1)
+        reminder_date = today + timedelta(days=3)
         
-        # 1. Send reminders for books due tomorrow or today
+        # 1. Send reminders for books due in the next 3 days
         due_soon = IssueRecord.objects.filter(
             return_date__isnull=True,
-            due_date__lte=tomorrow,
-            due_date__gte=today
+            due_date=reminder_date
         )
         
         for record in due_soon:
             try:
                 send_due_date_reminder(record.member.user, record)
-                print(f"✓ Sent due date reminder for {record.book.title} to {record.member.user.email}")
+                print(f"✓ Sent 3-day due date reminder for {record.book.title} to {record.member.user.email}")
             except Exception as e:
                 print(f"✗ Failed to send due reminder for {record.book.title}: {str(e)}")
         
@@ -56,12 +55,12 @@ def send_daily_reminders():
         
         # Summary
         total_reminders = due_soon.count() + overdue.count()
-        print(f"\n📧 Daily reminder job completed: {total_reminders} emails sent")
+        print(f"\n Daily reminder job completed: {total_reminders} emails sent (3-day reminders + overdue notifications)")
         
         return True
-        
+
     except Exception as e:
-        print(f"❌ Error in send_daily_reminders cron job: {str(e)}")
+        print(f"Error in send_daily_reminders cron job: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
@@ -103,7 +102,7 @@ def send_weekly_summary():
             'active_members': active_members,
         }
         
-        print(f"📊 Weekly Summary Generated:")
+        print(f"Weekly Summary Generated:")
         print(f"   - Issues this week: {recent_issues}")
         print(f"   - Pending returns: {pending_returns}")
         print(f"   - Active members: {active_members}")
@@ -111,7 +110,7 @@ def send_weekly_summary():
         return True
         
     except Exception as e:
-        print(f"❌ Error in send_weekly_summary cron job: {str(e)}")
+        print(f"Error in send_weekly_summary cron job: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
@@ -138,15 +137,15 @@ def cleanup_old_records():
         count = very_old_issues.count()
         
         if count > 0:
-            print(f"⚠️  Found {count} books unreturned for 60+ days")
+            print(f"Found {count} books unreturned for 60+ days")
             # Could send escalation emails here
         
-        print(f"🗑️  Cleanup job completed")
+        print(f" Cleanup job completed")
         
         return True
         
     except Exception as e:
-        print(f"❌ Error in cleanup_old_records cron job: {str(e)}")
+        print(f"Error in cleanup_old_records cron job: {str(e)}")
         import traceback
         traceback.print_exc()
         return False
