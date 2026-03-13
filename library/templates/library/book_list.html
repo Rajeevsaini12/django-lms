@@ -137,20 +137,7 @@
                     {% endif %}
                 </div>
 
-                <!-- Progress Bar -->
-                <div class="mb-3">
-                    <small class="text-muted">Availability</small>
-                    <div class="progress" style="height: 6px;">
-                        {% widthratio book.available_copies book.total_copies 100 as availability_percent %}
-                        {% if availability_percent >= 50 %}
-                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ availability_percent }}%"></div>
-                        {% elif availability_percent >= 25 %}
-                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ availability_percent }}%"></div>
-                        {% else %}
-                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ availability_percent }}%"></div>
-                        {% endif %}
-                    </div>
-                </div>
+
 
                 <!-- Actions -->
                 <div class="mt-auto">

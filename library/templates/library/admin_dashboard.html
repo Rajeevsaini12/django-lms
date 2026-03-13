@@ -34,13 +34,15 @@
     </div>
     
     <div class="col-md-3 col-sm-6 mb-3">
-        <div class="card text-center h-100" style="border-left: 4px solid #ff9800;">
-            <div class="card-body">
-                <i class="fas fa-hand-holding-heart fa-2x mb-3" style="color: #ff9800;"></i>
-                <h6 class="card-title text-muted">Books Issued</h6>
-                <h2 class="card-text" id="issued-books">{{ dashboard.issued }}</h2>
+        <a href="{% url 'all_issued_books' %}" class="card-link" style="text-decoration: none;">
+            <div class="card text-center h-100 clickable-card" style="border-left: 4px solid #ff9800; cursor: pointer; transition: all 0.3s ease;">
+                <div class="card-body">
+                    <i class="fas fa-hand-holding-heart fa-2x mb-3" style="color: #ff9800;"></i>
+                    <h6 class="card-title text-muted">Books Issued</h6>
+                    <h2 class="card-text" id="issued-books">{{ dashboard.issued }}</h2>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
     
     <div class="col-md-3 col-sm-6 mb-3">

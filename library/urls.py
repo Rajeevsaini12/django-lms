@@ -19,10 +19,13 @@ urlpatterns = [
     # Frontend Views
     path('login/', views.login_view, name='login'),
     path('register/', views.register_student, name='register'),
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('verify-forgot-password/', views.verify_forgot_password, name='verify_forgot_password'),
     path('logout/', views.logout_view, name='logout'),
     path('', views.dashboard, name='dashboard'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('all-students/', views.all_students_view, name='all_students'),
+    path('all-issued-books/', views.all_issued_books_view, name='all_issued_books'),
     path('student-dashboard/', views.student_dashboard_view, name='student_dashboard_view'),
     path('admin-history/', views.admin_history, name='admin_history'),
     path('student-history/', views.student_history_view, name='student_history'),

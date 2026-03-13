@@ -654,6 +654,178 @@ def logout_view(request):
     return redirect('login')
 
 
+@require_http_methods(["GET", "POST"])
+def forgot_password(request):
+    """Forgot Password - Step 1: Email Input"""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        
+        # Check if user with this email exists
+        try:
+            user = User.objects.get(email=email)
+            if not hasattr(user, 'member'):
+                from django.contrib import messages
+                messages.error(request, '❌ User account not found in the system.')
+                return render(request, 'forgot_password.html', {'email': email})
+            
+            # Generate OTP
+            import random
+            otp = random.randint(100000, 999999)
+            request.session['forgot_password_otp'] = otp
+            request.session['forgot_password_email'] = email
+            request.session['forgot_password_user_id'] = user.id
+            
+            # Send OTP
+            from django.core.mail import send_mail
+            from django.conf import settings
+            try:
+                send_mail(
+                    'Password Reset OTP - Library Management System',
+                    f'Your OTP for password reset is: {otp}\n\nThis OTP is valid for 10 minutes.',
+                    settings.EMAIL_FROM_USER,
+                    [email],
+                    fail_silently=False,
+                )
+                from django.contrib import messages
+                messages.success(request, f'✅ OTP sent successfully to {email}')
+                return redirect('verify_forgot_password')
+            except Exception as e:
+                from django.contrib import messages
+                messages.error(request, f'❌ Failed to send OTP: {str(e)}')
+                return render(request, 'forgot_password.html', {'email': email})
+        
+        except User.DoesNotExist:
+            from django.contrib import messages
+            messages.error(request, '❌ No account found with this email address.')
+            return render(request, 'forgot_password.html', {'email': email})
+    
+    return render(request, 'forgot_password.html')
+
+
+@require_http_methods(["GET", "POST"])
+def verify_forgot_password(request):
+    """Forgot Password - Step 2: OTP Verification"""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    
+    email = request.session.get('forgot_password_email')
+    if not email:
+        from django.contrib import messages
+        messages.error(request, '❌ Session expired. Please try again.')
+        return redirect('forgot_password')
+    
+    if request.method == 'POST':
+        otp = request.POST.get('otp', '').strip()
+        session_otp = str(request.session.get('forgot_password_otp', ''))
+        
+        if otp == session_otp:
+            # OTP verified, generate new password
+            import string
+            import random
+            characters = string.ascii_letters + string.digits + '!@#$%'
+            new_password = ''.join(random.choice(characters) for _ in range(12))
+            
+            # Update user password
+            user_id = request.session.get('forgot_password_user_id')
+            try:
+                user = User.objects.get(id=user_id)
+                user.set_password(new_password)
+                user.save()
+                
+                # Send new password to email
+                from django.core.mail import send_mail
+                from django.conf import settings
+                from django.utils import timezone
+                
+                html_message = f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif;">
+                        <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px;">
+                            <h2 style="color: #667eea;">🔐 Your Password Has Been Reset</h2>
+                            <p>Hello <strong>{user.username}</strong>,</p>
+                            <p>Your password has been successfully reset. Here are your new login credentials:</p>
+                            
+                            <div style="background-color: white; padding: 15px; border-left: 4px solid #667eea; margin: 20px 0;">
+                                <p><strong>Username:</strong> <code>{user.username}</code></p>
+                                <p><strong>New Password:</strong> <code>{new_password}</code></p>
+                                <p><strong>Email:</strong> {user.email}</p>
+                            </div>
+                            
+                            <p style="color: #d9534f;"><strong>⚠️ Important Security Notes:</strong></p>
+                            <ul style="color: #666;">
+                                <li>Your new password is case-sensitive. Keep it safe and never share it.</li>
+                                <li>We recommend changing your password after login.</li>
+                                <li>If you didn't request this password reset, please contact the administrator immediately.</li>
+                            </ul>
+                            
+                            <p><strong>Login Link:</strong></p>
+                            <p><a href="http://localhost:4000/login/" style="color: #667eea; text-decoration: none; font-weight: bold;">Click here to login</a></p>
+                            
+                            <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">
+                            <p style="color: #999; font-size: 11px; margin-top: 20px;">
+                                This is an automated email. Please do not reply directly to this email.
+                            </p>
+                        </div>
+                    </body>
+                </html>
+                """
+                
+                plain_message = f"""
+                Your Password Has Been Reset!
+                
+                Hello {user.username},
+                
+                Your password has been successfully reset.
+                
+                LOGIN CREDENTIALS:
+                Username: {user.username}
+                New Password: {new_password}
+                Email: {user.email}
+                
+                Please keep these credentials safe and change your password after login.
+                
+                Login at: http://localhost:4000/login/
+                
+                If you didn't request this password reset, please contact the administrator.
+                """
+                
+                send_mail(
+                    'Password Reset Successful - Library Management System',
+                    plain_message,
+                    settings.EMAIL_FROM_USER,
+                    [email],
+                    html_message=html_message,
+                    fail_silently=False,
+                )
+                
+                # Clear session
+                del request.session['forgot_password_otp']
+                del request.session['forgot_password_email']
+                del request.session['forgot_password_user_id']
+                
+                from django.contrib import messages
+                messages.success(request, f'✅ Password reset successful! New password sent to your email. Please login with your new password.')
+                return redirect('login')
+            
+            except User.DoesNotExist:
+                from django.contrib import messages
+                messages.error(request, '❌ User not found. Please try again.')
+                return redirect('forgot_password')
+            except Exception as e:
+                from django.contrib import messages
+                messages.error(request, f'❌ Error resetting password: {str(e)}')
+                return render(request, 'verify_forgot_password.html', {'email': email})
+        else:
+            from django.contrib import messages
+            messages.error(request, '❌ Invalid OTP. Please try again.')
+            return render(request, 'verify_forgot_password.html', {'email': email})
+    
+    return render(request, 'verify_forgot_password.html', {'email': email})
+
+
 @login_required(login_url='login')
 def book_list_view(request):
     """Book list view with search, filter, and pagination"""
@@ -890,6 +1062,58 @@ def all_students_view(request):
     }
     
     return render(request, 'library/all_students.html', context)
+
+
+@login_required(login_url='login')
+def all_issued_books_view(request):
+    """View to list all issued books - Admin only"""
+    if not hasattr(request.user, 'member') or request.user.member.role != 'admin':
+        return redirect('dashboard')
+    
+    # Get all issued books (not returned)
+    issued_books = IssueRecord.objects.filter(return_date__isnull=True).order_by('-issue_date')
+    
+    # Filter by status
+    status = request.GET.get('status', '')
+    if status == 'overdue':
+        issued_books = issued_books.filter(due_date__lt=timezone.now().date())
+    elif status == 'active':
+        issued_books = issued_books.filter(due_date__gte=timezone.now().date())
+    
+    # Search functionality
+    query = request.GET.get('q', '')
+    if query:
+        issued_books = issued_books.filter(
+            Q(book__title__icontains=query) |
+            Q(book__author__icontains=query) |
+            Q(member__user__username__icontains=query) |
+            Q(member__user__first_name__icontains=query) |
+            Q(member__user__last_name__icontains=query)
+        )
+    
+    # Pagination
+    paginator = Paginator(issued_books, 15)
+    page = request.GET.get('page', 1)
+    issued_books = paginator.get_page(page)
+    
+    # Calculate total issued, overdue, and active
+    total_issued = IssueRecord.objects.filter(return_date__isnull=True).count()
+    overdue_books = IssueRecord.objects.filter(
+        return_date__isnull=True,
+        due_date__lt=timezone.now().date()
+    ).count()
+    active_books = total_issued - overdue_books
+    
+    context = {
+        'issued_books': issued_books,
+        'total_issued': total_issued,
+        'overdue_count': overdue_books,
+        'active_count': active_books,
+        'query': query,
+        'status': status,
+    }
+    
+    return render(request, 'library/all_issued_books.html', context)
 
 
 @login_required(login_url='login')
