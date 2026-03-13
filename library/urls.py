@@ -2,6 +2,10 @@ from django.urls import path, include
 from . import views
 from rest_framework.routers import DefaultRouter
 from .views import BookViewSet, MemberViewSet, IssueRecordViewSet
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+)
 
 
 router = DefaultRouter()
@@ -18,6 +22,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('', views.dashboard, name='dashboard'),
     path('admin-dashboard/', views.admin_dashboard, name='admin_dashboard'),
+    path('all-students/', views.all_students_view, name='all_students'),
     path('student-dashboard/', views.student_dashboard_view, name='student_dashboard_view'),
     path('admin-history/', views.admin_history, name='admin_history'),
     path('student-history/', views.student_history_view, name='student_history'),
@@ -50,6 +55,10 @@ urlpatterns = [
     path('api/student/books/', views.student_issued_books),
     path('api/student/history/', views.student_book_history),
     path('api/student/overdue/', views.student_overdue_books),
+
+    path("api/login/", TokenObtainPairView.as_view(), name="jwt_login"),
+    path("api/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/login/", views.jwt_login, name="jwt_login"),
 
 ]
 

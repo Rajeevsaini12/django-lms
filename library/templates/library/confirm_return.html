@@ -8,9 +8,19 @@
             <h1 class="page-title"><i class="fas fa-undo"></i> Confirm Book Returns</h1>
             <p class="page-subtitle">Verify and confirm books returned by students</p>
         </div>
-        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Dashboard
-        </a>
+        <button onclick="goBack()" class="btn btn-secondary">
+    <i class="fas fa-arrow-left"></i> Back
+</button>
+
+<script>
+function goBack() {
+    if (document.referrer !== "") {
+        history.back();
+    } else {
+        window.location.href = "{% url 'admin_dashboard' %}";
+    }
+}
+</script>
     </div>
 </div>
 
@@ -64,6 +74,23 @@
 {% else %}
 
 <!-- Pending Returns Table -->
+ <div class="card mb-3">
+    <div class="card-body">
+        <form method="GET" id="returnSearchForm">
+            <div class="input-group">
+                <input type="text"
+                       name="search"
+                       id="returnSearch"
+                       class="form-control"
+                       placeholder="Search by student name, username or email..."
+                       value="{{ request.GET.search }}">
+                <button class="btn btn-primary">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 <div class="card">
     <div class="card-header bg-warning text-white">
         <h5 class="mb-0"><i class="fas fa-list"></i> Pending Book Returns</h5>
@@ -78,7 +105,7 @@
                         <th>Issue Date</th>
                         <th>Due Date</th>
                         <th>Status</th>
-                        <th>Fine (if any)</th>
+                        <th>Fine</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -212,5 +239,17 @@
         font-size: 0.875rem;
     }
 </style>
+<!-- <script>
+let timer;
 
+document.getElementById("returnSearch").addEventListener("input", function(){
+
+    clearTimeout(timer);
+
+    timer = setTimeout(function(){
+        document.getElementById("returnSearchForm").submit();
+    }, 500);
+
+});
+</script> -->
 {% endblock %}

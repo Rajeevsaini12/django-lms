@@ -8,9 +8,19 @@
             <h1 class="page-title"><i class="fas fa-book-reader"></i> Issue Book to Student</h1>
             <p class="page-subtitle">Select a student and book to issue</p>
         </div>
-        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Dashboard
-        </a>
+        <button onclick="goBack()" class="btn btn-secondary">
+    <i class="fas fa-arrow-left"></i> Back
+</button>
+
+<script>
+function goBack() {
+    if (document.referrer !== "") {
+        history.back();
+    } else {
+        window.location.href = "{% url 'admin_dashboard' %}";
+    }
+}
+</script>
     </div>
 </div>
 

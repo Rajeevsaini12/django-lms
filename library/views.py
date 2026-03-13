@@ -19,10 +19,46 @@ from .permissions import IsAdmin
 from rest_framework.decorators import action
 from rest_framework.decorators import api_view, permission_classes
 
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.contrib.auth import authenticate
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.db.models import Q
+
+
+
 
 # ============================================
 # API VIEWS
 # ============================================
+
+
+
+@api_view(['POST'])
+def jwt_login(request):
+
+    username = request.data.get("username")
+    password = request.data.get("password")
+
+    user = authenticate(username=username, password=password)
+
+    if user is None:
+        return Response({"error": "Invalid username or password"}, status=401)
+
+    # generate JWT tokens
+    refresh = RefreshToken.for_user(user)
+
+    role = None
+    if hasattr(user, "member"):
+        role = user.member.role
+
+    return Response({
+        "username": user.username,
+        "role": role,
+        "access": str(refresh.access_token),
+        "refresh": str(refresh)
+    })
+
 
 @api_view(['GET'])
 def dashboard_api(request):
@@ -459,7 +495,7 @@ def register_student(request):
                 last_name = data['last_name']
                 email = data['email']
                 phone = data['phone']
-                username = email.split('@')[0]
+                username = email
                 counter = 1
                 original_username = username
                 while User.objects.filter(username=username).exists():
@@ -725,7 +761,7 @@ def delete_book(request, book_id):
         book.delete()
         return redirect('book_list')
     
-    return render(request, 'library/book_form.html', {'book': book, 'action': 'delete'})
+    return render(request, 'library/confirm_book_deletion.html', {'book': book})
 
 
 def api_books_list_view(request):
@@ -800,7 +836,7 @@ def admin_dashboard(request):
         return redirect('student_dashboard_view')
     
     books = Book.objects.count()
-    members = Member.objects.count()
+    students = Member.objects.filter(role='student').count()
     issued = IssueRecord.objects.filter(return_date__isnull=True).count()
     overdue = IssueRecord.objects.filter(
         return_date__isnull=True,
@@ -813,7 +849,7 @@ def admin_dashboard(request):
     context = {
         'dashboard': {
             'books': books,
-            'members': members,
+            'students': students,
             'issued': issued,
             'overdue': overdue,
         },
@@ -821,6 +857,39 @@ def admin_dashboard(request):
     }
     
     return render(request, 'library/admin_dashboard.html', context)
+
+
+@login_required(login_url='login')
+def all_students_view(request):
+    """View to list all students - Admin only"""
+    if not hasattr(request.user, 'member') or request.user.member.role != 'admin':
+        return redirect('dashboard')
+    
+    # Get all students
+    students = Member.objects.filter(role='student').order_by('-id')
+    
+    # Search functionality
+    query = request.GET.get('q', '')
+    if query:
+        students = students.filter(
+            Q(user__username__icontains=query) |
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query) |
+            Q(phone__icontains=query)
+        )
+    
+    # Pagination
+    paginator = Paginator(students, 10)
+    page = request.GET.get('page', 1)
+    students = paginator.get_page(page)
+    
+    context = {
+        'students': students,
+        'total_students': Member.objects.filter(role='student').count(),
+        'query': query,
+    }
+    
+    return render(request, 'library/all_students.html', context)
 
 
 @login_required(login_url='login')
@@ -1085,9 +1154,28 @@ def confirm_return_page(request):
             return redirect('confirm_return_page')
     
     # Get all currently issued books (not yet returned)
+    # pending_returns = IssueRecord.objects.filter(
+    #     return_date__isnull=True
+    # ).select_related('book', 'member__user').order_by('due_date')
+
+    
+    search = request.GET.get('search', '')
+
     pending_returns = IssueRecord.objects.filter(
         return_date__isnull=True
-    ).select_related('book', 'member__user').order_by('due_date')
+    ).select_related('book', 'member__user')
+
+    if search:
+        pending_returns = pending_returns.filter(
+        Q(member__user__username__icontains=search) |
+        Q(member__user__first_name__icontains=search) |
+        Q(member__user__last_name__icontains=search) |
+        Q(member__user__email__icontains=search)
+    )
+
+    pending_returns = pending_returns.order_by('due_date')
+
+    
     
     # Calculate fine for each book
     today = timezone.now().date()

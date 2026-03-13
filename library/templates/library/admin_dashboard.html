@@ -10,23 +10,27 @@
 <!-- Statistics Cards -->
 <div class="row mb-4">
     <div class="col-md-3 col-sm-6 mb-3">
-        <div class="card text-center h-100" style="border-left: 4px solid #667eea;">
-            <div class="card-body">
-                <i class="fas fa-book fa-2x mb-3" style="color: #667eea;"></i>
-                <h6 class="card-title text-muted">Total Books</h6>
-                <h2 class="card-text" id="total-books">{{ dashboard.books }}</h2>
+        <a href="{% url 'book_list' %}" class="card-link" style="text-decoration: none;">
+            <div class="card text-center h-100 clickable-card" style="border-left: 4px solid #667eea; cursor: pointer; transition: all 0.3s ease;">
+                <div class="card-body">
+                    <i class="fas fa-book fa-2x mb-3" style="color: #667eea;"></i>
+                    <h6 class="card-title text-muted">Total Books</h6>
+                    <h2 class="card-text" id="total-books">{{ dashboard.books }}</h2>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
     
     <div class="col-md-3 col-sm-6 mb-3">
-        <div class="card text-center h-100" style="border-left: 4px solid #28a745;">
-            <div class="card-body">
-                <i class="fas fa-users fa-2x mb-3" style="color: #28a745;"></i>
-                <h6 class="card-title text-muted">Total Members</h6>
-                <h2 class="card-text" id="total-members">{{ dashboard.members }}</h2>
+        <a href="{% url 'all_students' %}" class="card-link" style="text-decoration: none;">
+            <div class="card text-center h-100 clickable-card" style="border-left: 4px solid #28a745; cursor: pointer; transition: all 0.3s ease;">
+                <div class="card-body">
+                    <i class="fas fa-users fa-2x mb-3" style="color: #28a745;"></i>
+                    <h6 class="card-title text-muted">Total Students</h6>
+                    <h2 class="card-text" id="total-students">{{ dashboard.students }}</h2>
+                </div>
             </div>
-        </div>
+        </a>
     </div>
     
     <div class="col-md-3 col-sm-6 mb-3">
@@ -68,8 +72,7 @@
                     <a href="{% url 'confirm_return_page' %}" class="btn btn-warning">
                         <i class="fas fa-undo"></i> Confirm Return
                     </a>
-                    <a href="{% url 'admin_history' %}" class="btn btn-info">
-                        <i class="fas fa-history"></i> View History
+                   
                     </a>
                 </div>
             </div>
@@ -93,7 +96,7 @@
                             <th>Issue Date</th>
                             <th>Due Date</th>
                             <th>Status</th>
-                            <th>Action</th>
+                            <th class="text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -116,13 +119,20 @@
                                         <span class="badge bg-warning">Issued</span>
                                     {% endif %}
                                 </td>
-                                <td>
+                                <!-- <td>
                                     {% if not issue.return_date %}
                                         <a href="{% url 'update_due_date_page' issue.id %}" class="btn btn-sm btn-primary">
                                             <i class="fas fa-calendar-alt"></i> Update Due Date
                                         </a>
                                     {% endif %}
-                                </td>
+                                </td> -->
+                                <td class="text-center align-middle"> 
+                                        {% if not issue.return_date %}
+                                        <a href="{% url 'update_due_date_page' issue.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-calendar-alt"></i> Update Due Date
+                                        </a>
+    {% endif %}
+</td>
                             </tr>
                         {% empty %}
                             <tr>
@@ -148,6 +158,17 @@
     
     .card:hover {
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Clickable card styles */
+    .clickable-card {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+    }
+
+    .clickable-card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        transform: translateY(-5px);
     }
     
     .btn-group .btn {
