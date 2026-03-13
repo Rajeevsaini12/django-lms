@@ -89,16 +89,16 @@ def book_list_api(request):
     return Response(serializer.data)
 
 
-@api_view(['POST'])
-def create_book_api(request):
+    @api_view(['POST'])
+    def create_book_api(request):
 
-    serializer = BookSerializer(data=request.data)
+        serializer = BookSerializer(data=request.data)
 
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
 
-    return Response(serializer.errors)
+        return Response(serializer.errors)
 
 
 @api_view(['PUT'])
